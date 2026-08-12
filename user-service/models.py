@@ -3,7 +3,8 @@ models.py
 Defines the User table structure using SQLAlchemy's ORM.
 """
 
-from sqlalchemy import Column, Integer, String, DateTime 
+from sqlalchemy import Column, Integer, String, DateTime
+from sqlalchemy.sql import func
 from database import Base 
 
 class User(Base):
