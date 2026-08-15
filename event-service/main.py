@@ -84,7 +84,7 @@ def create_event(event_in: schemas.EventCreate, db: Session = Depends(get_db)):
 def list_events(category: str | None = None, db: Session = Depends(get_db)):
     """Lists all events, optionally filtered by category."""
     query = db.query(models.Event)
-    if category:
+    if category:  # this also skips empty strings, not just None
         query = query.filter(models.Event.category == category)
     return query.all()
 
