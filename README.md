@@ -1,8 +1,6 @@
 # Campus Event Management System
 
-A service-oriented backend for managing campus events, built as five
-independent REST API microservices. Students can register, browse events,
-book a spot, receive notifications, and leave reviews after attending.
+A service-oriented backend for managing campus events, built as fiveindependent REST API microservices. Students can register, browse events,book a spot, receive notifications, and leave reviews after attending.
 
 Built for **NADV 744 — Advanced Development Systems**
 
@@ -10,42 +8,42 @@ Built for **NADV 744 — Advanced Development Systems**
 
 ## Architecture Overview
 
-The system consists of five independent microservices, each with its own
-database, communicating over REST APIs:
+The system consists of five independent microservices, each with its owndatabase, communicating over REST APIs:
 
 | Service | Port | Responsibility |
-|---|---|---|
+| --- | --- | --- |
 | **User / Auth Service** | 8001 | Registration, login, JWT authentication, user profiles |
 | **Event Service** | 8002 | Create, list, update, and delete campus events |
 | **Booking Service** | 8003 | Book a spot at an event, enforce capacity limits, cancellations |
 | **Notification Service** | 8004 | Create, list, and mark simulated booking/event notifications as read |
 | **Review Service** | 8005 | Post-event ratings and comments |
 
-Two services genuinely depend on others to do their job, demonstrating
-real service-oriented communication:
+Two services genuinely depend on others to do their job, demonstratingreal service-oriented communication:
 
-- **Booking Service** calls the **User Service** (to verify the student
-  exists) and the **Event Service** (to verify the event exists and has
-  capacity) before confirming a booking.
-- **Event Service** calls the **User Service** to verify that whoever
-  creating an event is a registered organizer or admin.
-- **Notification Service** verifies the target user and optional event before
-  storing a notification, then exposes user-specific notification retrieval
-  and mark-as-read operations.
+- **Booking Service** calls the **User Service** (to verify the studentexists) and the **Event Service** (to verify the event exists and hascapacity) before confirming a booking.
 
-Each service can be started, stopped, and tested completely independently
-of the others.
+- **Event Service** calls the **User Service** to verify that whoevercreating an event is a registered organizer or admin.
+
+- **Notification Service** verifies the target user and optional event beforestoring a notification, then exposes user-specific notification retrievaland mark-as-read operations.
+
+Each service can be started, stopped, and tested completely independentlyof the others.
 
 ---
 
 ## Tech Stack
 
 - **Language:** Python 3.13
+
 - **Framework:** FastAPI
+
 - **Database:** SQLite (one independent database file per service)
+
 - **Authentication:** JWT (JSON Web Tokens), passwords hashed with bcrypt
+
 - **Inter-service communication:** REST over HTTP, via `httpx`
+
 - **Testing:** pytest, FastAPI's `TestClient`
+
 - **Version control:** Git / GitHub
 
 ---
@@ -67,7 +65,7 @@ campus-event-system/
 │   ├── requirements.txt
 │   └── README.md
 ├── event-service/
-│   └── (same pattern)
+│   └── (same pattern )
 ├── booking-service/
 │   └── (same pattern)
 ├── notification-service/
@@ -76,27 +74,98 @@ campus-event-system/
     └── (same pattern)
 ```
 
-Each service folder is self-contained: its own virtual environment, its
-own dependencies, its own database file, and its own test suite.
+Each service folder is self-contained: its own virtual environment, itsown dependencies, its own database file, and its own test suite.
 
 ---
 
-## Getting Started
+## Getting Started on Windows
 
-For full step-by-step setup, run, and test instructions, see
-**[EXECUTION.md](./EXECUTION.md)**.
+The easiest way to run the complete system is to use the supplied`start-all.bat` launcher. The launcher prepares every service and then startsall five services on ports 8001–8005.
 
-Quick summary:
+### Required project layout
 
-1. Set up each service's virtual environment and install its dependencies
-2. Start all five services at once, each in its own terminal, each on its
-   own port (8001–8005)
-3. Use each service's `/docs` page to interact with it, or follow the
-   suggested demo flow in EXECUTION.md
+Keep `start-all.bat` in the project root, at the same level as the five service folders:
+
+```
+campus-event-system-main/
+├── start-all.bat
+├── start-all.ps1
+├── user-service/
+├── event-service/
+├── booking-service/
+├── notification-service/
+└── review-services/
+```
+
+The launcher performs these steps for every service in order:
+
+```
+1. Change into the service directory
+2. Create the virtual environment with: python -m venv venv
+3. Activate it with: venv/Scripts/activate
+4. Install dependencies with: pip install -r requirements.txt
+5. Start the service with: uvicorn main:app --reload --port <port>
+```
+
+### Option 1: Start by double-clicking
+
+Open the project folder in Windows File Explorer and double-click:
+
+```
+start-all.bat
+```
+
+The script opens a separate Command Prompt window for each service. Keep these windows open while using the system. If setup fails, the script stops and displays the error in the launcher window.
+
+### Option 2: Start from the VS Code terminal
+
+Open the project root in VS Code. Open a terminal using **Terminal → New Terminal**, then confirm that the terminal is in the project root. You can check the current folder with:
+
+```
+cd
+```
+
+Run the launcher with:
+
+```
+start-all.bat
+```
+
+Alternatively, from PowerShell run:
+
+```
+./start-all.ps1
+```
+
+The launcher creates or reuses each service's virtual environment, installs its `requirements.txt`, and opens the five services in separate terminal windows. You do not need to activate all five environments manually when using the launcher.
+
+### Service URLs
+
+| Service | Port | API documentation |
+| --- | --- | --- |
+| User/Auth Service | 8001 | [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs) |
+| Event Service | 8002 | [http://127.0.0.1:8002/docs](http://127.0.0.1:8002/docs) |
+| Booking Service | 8003 | [http://127.0.0.1:8003/docs](http://127.0.0.1:8003/docs) |
+| Notification Service | 8004 | [http://127.0.0.1:8004/docs](http://127.0.0.1:8004/docs) |
+| Review Service | 8005 | [http://127.0.0.1:8005/docs](http://127.0.0.1:8005/docs) |
+
+### Manual setup if the launcher is not used
+
+If you prefer to run a service manually, open a separate VS Code terminal for each service and use forward-slash paths:
+
+```
+cd user-service/
+python -m venv venv
+venv/Scripts/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8001
+```
+
+Repeat the same sequence for `event-service/`, `booking-service/`, `notification-service/`, and `review-services/`, changing the port to 8002, 8003, 8004, and 8005 respectively.
+
+For testing instructions and the suggested end-to-end demo flow, see[**EXECUTION.md**](./EXECUTION.md).
 
 ---
-
-
 
 ## Production deployment
 
