@@ -1,0 +1,103 @@
+"""End-to-end demonstration and evidence collector.
+
+Run this only while all five services are running. It creates one temporary
+organizer, one temporary student, one event, one booking, one notification,
+and one review. It writes demo_results.md and demo_results.json.
+
+Windows, from the project root:
+    pip install requests
+    python e2e_demo.py
+"""
+from __future__ import annotations
+
+import json
+import sys
+import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import requests
+
+ROOT = Path(__file__).resolve().parent
+USER = "http://127.0.0.1:8001"
+EVENT = "http://127.0.0.1:8002"
+BOOKING = "http://127.0.0.1:8003"
+NOTIFICATION = "http://127.0.0.1:8004"
+REVIEW = "http://127.0.0.1:8005"
+TIMEOUT = 10
+results: list[dict] = []
+
+
+def record(name: str, method: str, url: str, response: requests.Response | None, expected: set[int]) -> requests.Response:
+    if response is None:
+        item = {"step": name, "method": method, "url": url, "status": "UNREACHABLE", "expected": sorted(expected), "passed": False}
+    else:
+        item = {"step": name, "method": method, "url": url, "status": response.status_code, "expected": sorted(expected), "passed": response.status_code in expected}
+        try:
+            item["response"] = response.json()
+        except ValueError:
+            item["response"] = response.text[:500]
+    results.append(item)
+    print(f"{'PASS' if item['passed'] else 'FAIL'} {method} {url} -> {item['status']}")
+    if response is None or response.status_code not in expected:
+        raise RuntimeError(f"Step failed: {name}")
+    return response
+
+
+def call(name: str, method: str, url: str, expected: set[int], **kwargs) -> requests.Response:
+    try:
+        response = requests.request(method, url, timeout=TIMEOUT, **kwargs)
+    except requests.RequestException:
+        record(name, method, url, None, expected)
+        raise
+    return record(name, method, url, response, expected)
+
+
+def main() -> int:
+    stamp = str(int(time.time()))
+    organizer_email = f"demo.organizer.{stamp}@example.com"
+    student_email = f"demo.student.{stamp}@example.com"
+    password = "DemoPass123!"
+    try:
+        organizer = call("Register organizer", "POST", f"{USER}/api/auth/register", {201}, json={
+            "full_name": "Evidence Demo Organizer", "email": organizer_email, "password": password, "role": "organizer"
+        }).json()
+        student = call("Register student", "POST", f"{USER}/api/auth/register", {201}, json={
+            "full_name": "Evidence Demo Student", "email": student_email, "password": password, "role": "student"
+        }).json()
+        organizer_token = call("Login organizer", "POST", f"{USER}/api/auth/login", {200}, json={"email": organizer_email, "password": password}).json()["access_token"]
+        student_token = call("Login student", "POST", f"{USER}/api/auth/login", {200}, json={"email": student_email, "password": password}).json()["access_token"]
+        event = call("Create event", "POST", f"{EVENT}/api/events", {201}, headers={"Authorization": f"Bearer {organizer_token}"}, json={
+            "title": f"Evidence Demo Event {stamp}", "description": "Temporary event created by the evidence script.", "category": "academic",
+            "location": "Campus Main Hall", "event_date": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+            "capacity": 5, "organizer_id": organizer["id"]
+        }).json()
+        event_id = event["id"]
+        call("List events", "GET", f"{EVENT}/api/events", {200})
+        booking_headers = {"Authorization": f"Bearer {student_token}"}
+        call("Create booking", "POST", f"{BOOKING}/api/bookings", {201}, headers=booking_headers, json={"event_id": event_id, "student_id": student["id"]})
+        call("Reject duplicate booking", "POST", f"{BOOKING}/api/bookings", {409}, headers=booking_headers, json={"event_id": event_id, "student_id": student["id"]})
+        call("Send notification", "POST", f"{NOTIFICATION}/api/notifications/send", {201}, headers=booking_headers, json={
+            "user_id": student["id"], "event_id": event_id, "notification_type": "booking_confirmation", "message": "Your booking has been confirmed."
+        })
+        call("List notifications", "GET", f"{NOTIFICATION}/api/notifications/user/{student['id']}", {200}, headers=booking_headers)
+        review = call("Create review", "POST", f"{REVIEW}/api/reviews", {201}, headers=booking_headers, json={
+            "event_id": event_id, "student_id": student["id"], "rating": 5, "comment": "Excellent demo event."
+        }).json()
+        call("Calculate average rating", "GET", f"{REVIEW}/api/reviews/event/{event_id}/average", {200})
+        print(f"\nDemo completed successfully for event {event_id}.")
+    except Exception as exc:
+        print(f"\nDemo stopped: {exc}", file=sys.stderr)
+
+    md = ["# End-to-End Demo Results", "", "This file was generated by `e2e_demo.py`.", "", "| Step | Method | URL | Status | Expected | Result |", "|---|---|---|---:|---|---|"]
+    for item in results:
+        expected = ", ".join(str(x) for x in item["expected"])
+        md.append(f"| {item['step']} | `{item['method']}` | `{item['url']}` | {item['status']} | {expected} | {'PASS' if item['passed'] else 'FAIL'} |")
+    md += ["", "## How to use this evidence", "", "Include this table in the testing/demo section and capture the Swagger UI or terminal output while the script runs. The script creates temporary demo data, so label it as demonstration data in the report.", ""]
+    (ROOT / "demo_results.md").write_text("\n".join(md), encoding="utf-8")
+    (ROOT / "demo_results.json").write_text(json.dumps(results, indent=2, default=str), encoding="utf-8")
+    return 0 if results and all(item["passed"] for item in results) else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

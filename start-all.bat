@@ -28,12 +28,19 @@ start "Notification Service - 8004" cmd /k "cd /d "%ROOT%/notification-service" 
 start "Review Service - 8005" cmd /k "cd /d "%ROOT%/review-services" && call venv/Scripts/activate && uvicorn main:app --reload --port 8005"
 
 echo.
-echo Services started:
+echo Services started. Open these Swagger API pages:
 echo   User/Auth:    http://127.0.0.1:8001/docs
 echo   Event:        http://127.0.0.1:8002/docs
 echo   Booking:      http://127.0.0.1:8003/docs
 echo   Notification: http://127.0.0.1:8004/docs
 echo   Review:       http://127.0.0.1:8005/docs
+echo.
+echo Health checks, if needed:
+echo   User/Auth:    http://127.0.0.1:8001/health
+echo   Event:        http://127.0.0.1:8002/health
+echo   Booking:      http://127.0.0.1:8003/health
+echo   Notification: http://127.0.0.1:8004/health
+echo   Review:       http://127.0.0.1:8005/health
 exit /b 0
 
 :setup_service
