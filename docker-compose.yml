@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: campus_events
+      POSTGRES_USER: campus
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campus -d campus_events"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+  user-service:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    working_dir: /app/user-service
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://campus:${POSTGRES_PASSWORD}@db:5432/campus_events
+    depends_on: {db: {condition: service_healthy}}
+  event-service:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8002
+    working_dir: /app/event-service
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://campus:${POSTGRES_PASSWORD}@db:5432/campus_events
+      USER_SERVICE_URL: http://user-service:8001
+    depends_on: {db: {condition: service_healthy}, user-service: {condition: service_started}}
+  booking-service:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8003
+    working_dir: /app/booking-service
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://campus:${POSTGRES_PASSWORD}@db:5432/campus_events
+      USER_SERVICE_URL: http://user-service:8001
+      EVENT_SERVICE_URL: http://event-service:8002
+    depends_on: {db: {condition: service_healthy}}
+  notification-service:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8004
+    working_dir: /app/notification-service
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://campus:${POSTGRES_PASSWORD}@db:5432/campus_events
+      USER_SERVICE_URL: http://user-service:8001
+      EVENT_SERVICE_URL: http://event-service:8002
+    depends_on: {db: {condition: service_healthy}}
+  review-service:
+    build: .
+    command: uvicorn main:app --host 0.0.0.0 --port 8005
+    working_dir: /app/review-services
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://campus:${POSTGRES_PASSWORD}@db:5432/campus_events
+      USER_SERVICE_URL: http://user-service:8001
+      EVENT_SERVICE_URL: http://event-service:8002
+    depends_on: {db: {condition: service_healthy}}
+volumes:
+  postgres_data:

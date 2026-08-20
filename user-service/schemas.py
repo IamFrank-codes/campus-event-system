@@ -5,7 +5,7 @@ and what it promises to send back (responses). FastAPI uses these to
 auto-validate incoming data and to auto-generate the /docs page.
 """
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from datetime import datetime
 from typing import Literal
 
@@ -35,8 +35,7 @@ class UserResponse(BaseModel):
     role: str
     created_at: datetime
 
-    class Config:
-        from_attributes = True  # allows Pydantic to read SQLAlchemy objects directly
+    model_config = ConfigDict(from_attributes=True)
 
 
 class Token(BaseModel):

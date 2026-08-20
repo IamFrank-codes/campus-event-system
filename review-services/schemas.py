@@ -3,7 +3,7 @@ schemas.py
 Defines the request/response shapes for the Review API.
 """
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 
 
@@ -24,5 +24,4 @@ class ReviewResponse(BaseModel):
     comment: str | None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

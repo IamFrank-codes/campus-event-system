@@ -195,7 +195,7 @@ Use the supplied test runner from the project root instead:
 run-tests-all.bat
 ```
 
-This runner installs each service's requirements and runs pytest with that service's own interpreter, for example:
+This runner does not install or upgrade packages. It only runs pytest with each service's existing interpreter. Install dependencies first with `start-all.bat` or the manual setup commands. The runner uses commands such as:
 
 ```bat
 user-service/venv/Scripts/python.exe -m pytest -v
