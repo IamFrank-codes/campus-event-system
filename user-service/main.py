@@ -21,16 +21,21 @@ from jose import JWTError
 from database import Base, engine, get_db
 import models
 import schemas
+from settings import settings
 import auth
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 # Creates the users table on startup if it doesn't already exist
 Base.metadata.create_all(bind=engine)
+
+
 
 app = FastAPI(
     title="User / Auth Service",
     description="Handles registration, login and profiles for the Campus Event Management System",
     version="1.0.0",
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts.split(","))
 
 # Tells FastAPI where clients should send their credentials to get a token
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
@@ -140,8 +145,6 @@ def update_user(
 
     if updates.full_name is not None:
         user.full_name = updates.full_name
-    if updates.role is not None:
-        user.role = updates.role
 
     db.commit()
     db.refresh(user)

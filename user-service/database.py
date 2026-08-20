@@ -9,7 +9,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base 
 
 # SQLite file will be created automatically in this folder on first run
-DATABASE_URL = "sqlite:///./users.db"
+from settings import settings
+DATABASE_URL = settings.database_url
 
 # check_same_thread=False is required for SQLite when used with FastAPI,
 # since FastAPI can handle requests across multiple threads

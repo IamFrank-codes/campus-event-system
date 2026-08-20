@@ -18,7 +18,7 @@ database, communicating over REST APIs:
 | **User / Auth Service** | 8001 | Registration, login, JWT authentication, user profiles |
 | **Event Service** | 8002 | Create, list, update, and delete campus events |
 | **Booking Service** | 8003 | Book a spot at an event, enforce capacity limits, cancellations |
-| **Notification Service** | 8004 | Simulated notifications (booking confirmations, reminders) |
+| **Notification Service** | 8004 | Create, list, and mark simulated booking/event notifications as read |
 | **Review Service** | 8005 | Post-event ratings and comments |
 
 Two services genuinely depend on others to do their job, demonstrating
@@ -27,8 +27,11 @@ real service-oriented communication:
 - **Booking Service** calls the **User Service** (to verify the student
   exists) and the **Event Service** (to verify the event exists and has
   capacity) before confirming a booking.
-- **Event Service** calls the **User Service** to verify that whoever is
+- **Event Service** calls the **User Service** to verify that whoever
   creating an event is a registered organizer or admin.
+- **Notification Service** verifies the target user and optional event before
+  storing a notification, then exposes user-specific notification retrieval
+  and mark-as-read operations.
 
 Each service can be started, stopped, and tested completely independently
 of the others.
@@ -93,3 +96,14 @@ Quick summary:
 
 ---
 
+
+
+## Production deployment
+
+Copy `.env.example` to `.env`, set a strong `JWT_SECRET_KEY`, set `POSTGRES_PASSWORD`, and review `ALLOWED_HOSTS`. Run the stack with `docker compose up --build`. Production mode rejects the development JWT secret and SQLite.
+
+All state-changing routes require a bearer token. Organizer/admin roles are required for event management, students create bookings and reviews, and users cannot change their own roles. Service URLs and database URLs are configurable through environment variables.
+
+### Notification API
+
+The Notification Service is separate from the Booking Service. Its primary endpoints are `POST /api/notifications/send`, `GET /api/notifications/user/{user_id}`, and `PATCH /api/notifications/{notification_id}/read`. Notifications store a target user, optional event, notification type, message, read state, and creation timestamp.

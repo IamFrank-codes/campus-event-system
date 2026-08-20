@@ -1,141 +1,99 @@
-"""
-main.py
-Booking Service - Campus Event Management System
-
-Handles students booking spots at events. Before confirming a booking,
-this service checks TWO other services:
-1. User service - is this a real, registered student?
-2. Event service - does this event exist, and is there still room?
-
-This is the clearest example in the whole system of services
-genuinely depending on and coordinating with each other.
-
-Run with:
-    uvicorn main:app --reload --port 8003
-Then visit http://127.0.0.1:8003/docs
-"""
-
-from fastapi import FastAPI, Depends, HTTPException, status
+"""Notification Service for the Campus Event Management System."""
+from fastapi import Depends, FastAPI, HTTPException, status
 from sqlalchemy.orm import Session
 import httpx
 
 from database import Base, engine, get_db
 import models
 import schemas
+from security import current_claims, require_roles
+from settings import settings
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 Base.metadata.create_all(bind=engine)
-
 app = FastAPI(
-    title="Booking Service",
-    description="Handles event bookings for the Campus Event Management System",
-    version="1.0.0",
+    title="Notification Service",
+    description="Creates and retrieves simulated campus event notifications",
+    version="2.0.0",
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts.split(","))
 
-USER_SERVICE_URL = "http://127.0.0.1:8001"
-EVENT_SERVICE_URL = "http://127.0.0.1:8002"
+USER_SERVICE_URL = settings.user_service_url
+EVENT_SERVICE_URL = settings.event_service_url
 
 
-def verify_student(student_id: int):
-    """Checks the User service that this student actually exists."""
+def verify_user(user_id: int) -> None:
     try:
-        response = httpx.get(f"{USER_SERVICE_URL}/api/users/{student_id}", timeout=5.0)
-    except httpx.ConnectError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="User service is unavailable - cannot verify student",
-        )
+        response = httpx.get(f"{USER_SERVICE_URL}/api/users/{user_id}", timeout=5.0)
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail="User service is unavailable") from exc
     if response.status_code == 404:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"No user found with id {student_id}",
-        )
+        raise HTTPException(status_code=404, detail="User not found")
+    if response.status_code >= 500:
+        raise HTTPException(status_code=503, detail="User service is unavailable")
+    if response.status_code >= 400:
+        raise HTTPException(status_code=400, detail="User could not be verified")
 
 
-def get_event_or_error(event_id: int) -> dict:
-    """Checks the Event service that this event actually exists, and returns its data."""
+def verify_event(event_id: int) -> None:
     try:
         response = httpx.get(f"{EVENT_SERVICE_URL}/api/events/{event_id}", timeout=5.0)
-    except httpx.ConnectError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Event service is unavailable - cannot verify event",
-        )
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=503, detail="Event service is unavailable") from exc
     if response.status_code == 404:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"No event found with id {event_id}",
-        )
-    return response.json()
+        raise HTTPException(status_code=404, detail="Event not found")
+    if response.status_code >= 500:
+        raise HTTPException(status_code=503, detail="Event service is unavailable")
+    if response.status_code >= 400:
+        raise HTTPException(status_code=400, detail="Event could not be verified")
 
 
 @app.get("/health")
 def health_check():
-    return {"status": "ok", "service": "booking-service"}
+    return {"status": "ok", "service": "notification-service"}
 
 
-@app.post("/api/bookings", response_model=schemas.BookingResponse, status_code=status.HTTP_201_CREATED)
-def create_booking(booking_in: schemas.BookingCreate, db: Session = Depends(get_db)):
-    """
-    Books a student into an event, after checking:
-    - the student is real (User service)
-    - the event is real (Event service)
-    - the event isn't already full (counted from this service's own bookings)
-    """
-    verify_student(booking_in.student_id)
-    event = get_event_or_error(booking_in.event_id)
-
-    existing_bookings = db.query(models.Booking).filter(
-        models.Booking.event_id == booking_in.event_id,
-        models.Booking.status == "confirmed",
-    ).count()
-
-    if existing_bookings >= event["capacity"]:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This event is already fully booked",
-        )
-
-    already_booked = db.query(models.Booking).filter(
-        models.Booking.event_id == booking_in.event_id,
-        models.Booking.student_id == booking_in.student_id,
-        models.Booking.status == "confirmed",
-    ).first()
-
-    if already_booked:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="This student already has a booking for this event",
-        )
-
-    new_booking = models.Booking(
-        event_id=booking_in.event_id,
-        student_id=booking_in.student_id,
-        status="confirmed",
-    )
-    db.add(new_booking)
+@app.post("/api/notifications/send", response_model=schemas.NotificationResponse, status_code=status.HTTP_201_CREATED)
+def send_notification(
+    notification_in: schemas.NotificationCreate,
+    db: Session = Depends(get_db),
+    claims: dict = Depends(require_roles("student", "organizer", "admin")),
+):
+    if claims.get("role") != "admin" and int(claims["sub"]) != notification_in.user_id:
+        raise HTTPException(status_code=403, detail="User id must match the authenticated user")
+    verify_user(notification_in.user_id)
+    if notification_in.event_id is not None:
+        verify_event(notification_in.event_id)
+    notification = models.Notification(**notification_in.model_dump())
+    db.add(notification)
     db.commit()
-    db.refresh(new_booking)
-    return new_booking
+    db.refresh(notification)
+    return notification
 
 
-@app.get("/api/bookings/student/{student_id}", response_model=list[schemas.BookingResponse])
-def get_student_bookings(student_id: int, db: Session = Depends(get_db)):
-    """Lists all bookings made by a specific student."""
-    return db.query(models.Booking).filter(models.Booking.student_id == student_id).all()
+@app.get("/api/notifications/user/{user_id}", response_model=list[schemas.NotificationResponse])
+def get_user_notifications(
+    user_id: int,
+    db: Session = Depends(get_db),
+    claims: dict = Depends(current_claims),
+):
+    if claims.get("role") != "admin" and int(claims["sub"]) != user_id:
+        raise HTTPException(status_code=403, detail="You can only view your own notifications")
+    return db.query(models.Notification).filter(models.Notification.user_id == user_id).order_by(models.Notification.created_at.desc()).all()
 
 
-@app.get("/api/bookings/event/{event_id}", response_model=list[schemas.BookingResponse])
-def get_event_bookings(event_id: int, db: Session = Depends(get_db)):
-    """Lists all bookings for a specific event - useful for an organizer to see who's coming."""
-    return db.query(models.Booking).filter(models.Booking.event_id == event_id).all()
-
-
-@app.delete("/api/bookings/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
-def cancel_booking(booking_id: int, db: Session = Depends(get_db)):
-    """Cancels a booking, freeing up the spot for someone else."""
-    booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
-    if not booking:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
-
-    booking.status = "cancelled"
+@app.patch("/api/notifications/{notification_id}/read", response_model=schemas.NotificationResponse)
+def mark_notification_read(
+    notification_id: int,
+    db: Session = Depends(get_db),
+    claims: dict = Depends(current_claims),
+):
+    notification = db.query(models.Notification).filter(models.Notification.id == notification_id).first()
+    if notification is None:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    if claims.get("role") != "admin" and int(claims["sub"]) != notification.user_id:
+        raise HTTPException(status_code=403, detail="You can only update your own notifications")
+    notification.is_read = True
     db.commit()
+    db.refresh(notification)
+    return notification

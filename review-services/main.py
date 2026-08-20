@@ -11,21 +11,28 @@ Run with:
 Then visit http://127.0.0.1:8005/docs
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func as sql_func
 
 from database import Base, engine, get_db
 import models
 import schemas
+from settings import settings
+from security import current_claims, require_roles
 
 Base.metadata.create_all(bind=engine)
+
+
 
 app = FastAPI(
     title="Review Service",
     description="Handles event reviews for the Campus Event Management System",
     version="1.0.0",
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts.split(","))
 
 
 @app.get("/health")
@@ -34,7 +41,9 @@ def health_check():
 
 
 @app.post("/api/reviews", response_model=schemas.ReviewResponse, status_code=status.HTTP_201_CREATED)
-def create_review(review_in: schemas.ReviewCreate, db: Session = Depends(get_db)):
+def create_review(review_in: schemas.ReviewCreate, db: Session = Depends(get_db), claims: dict = Depends(require_roles("student", "admin"))):
+    if claims.get("role") != "admin" and int(claims["sub"]) != review_in.student_id:
+        raise HTTPException(status_code=403, detail="Student id must match the authenticated user")
     """Creates a new review. A student can only review a given event once."""
     existing = db.query(models.Review).filter(
         models.Review.event_id == review_in.event_id,
@@ -80,7 +89,7 @@ def get_event_average_rating(event_id: int, db: Session = Depends(get_db)):
 
 
 @app.delete("/api/reviews/{review_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_review(review_id: int, db: Session = Depends(get_db)):
+def delete_review(review_id: int, db: Session = Depends(get_db), claims: dict = Depends(current_claims)):
     """Deletes a review."""
     review = db.query(models.Review).filter(models.Review.id == review_id).first()
     if not review:

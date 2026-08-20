@@ -1,20 +1,14 @@
-"""
-models.py
-Defines the Booking table structure.
-"""
-
-from sqlalchemy import Column, Integer, String, DateTime
+"""Persistence models for notifications."""
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 from sqlalchemy.sql import func
 from database import Base
 
-
-class Booking(Base):
-    __tablename__ = "bookings"
-
+class Notification(Base):
+    __tablename__ = "notifications"
     id = Column(Integer, primary_key=True, index=True)
-    # These reference records in OTHER services' databases -
-    # this service just stores the ids, not the actual data
-    event_id = Column(Integer, nullable=False, index=True)
-    student_id = Column(Integer, nullable=False, index=True)
-    status = Column(String, nullable=False, default="confirmed")  # confirmed or cancelled
-    booked_at = Column(DateTime(timezone=True), server_default=func.now())
+    user_id = Column(Integer, nullable=False, index=True)
+    event_id = Column(Integer, nullable=True, index=True)
+    notification_type = Column(String(40), nullable=False, default="booking_confirmation")
+    message = Column(String(1000), nullable=False)
+    is_read = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

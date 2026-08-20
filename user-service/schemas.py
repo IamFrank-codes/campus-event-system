@@ -48,4 +48,3 @@ class Token(BaseModel):
 class UserUpdate(BaseModel):
     """Shape of data allowed when updating a user profile."""
     full_name: str | None = Field(None, min_length=2, max_length=100)
-    role: Literal["student", "organizer", "admin"] | None = None
