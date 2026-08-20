@@ -15,24 +15,31 @@ Run with:
 Then visit http://127.0.0.1:8003/docs
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import httpx
 
 from database import Base, engine, get_db
 import models
 import schemas
+from settings import settings
+from security import current_claims, require_roles
 
 Base.metadata.create_all(bind=engine)
+
+
 
 app = FastAPI(
     title="Booking Service",
     description="Handles event bookings for the Campus Event Management System",
     version="1.0.0",
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts.split(","))
 
-USER_SERVICE_URL = "http://127.0.0.1:8001"
-EVENT_SERVICE_URL = "http://127.0.0.1:8002"
+USER_SERVICE_URL = settings.user_service_url
+EVENT_SERVICE_URL = settings.event_service_url
 
 
 def verify_student(student_id: int):
@@ -74,7 +81,7 @@ def health_check():
 
 
 @app.post("/api/bookings", response_model=schemas.BookingResponse, status_code=status.HTTP_201_CREATED)
-def create_booking(booking_in: schemas.BookingCreate, db: Session = Depends(get_db)):
+def create_booking(booking_in: schemas.BookingCreate, db: Session = Depends(get_db), claims: dict = Depends(require_roles("student", "admin"))):
     """
     Books a student into an event, after checking:
     - the student is real (User service)
@@ -119,19 +126,19 @@ def create_booking(booking_in: schemas.BookingCreate, db: Session = Depends(get_
 
 
 @app.get("/api/bookings/student/{student_id}", response_model=list[schemas.BookingResponse])
-def get_student_bookings(student_id: int, db: Session = Depends(get_db)):
+def get_student_bookings(student_id: int, db: Session = Depends(get_db), claims: dict = Depends(current_claims)):
     """Lists all bookings made by a specific student."""
     return db.query(models.Booking).filter(models.Booking.student_id == student_id).all()
 
 
 @app.get("/api/bookings/event/{event_id}", response_model=list[schemas.BookingResponse])
-def get_event_bookings(event_id: int, db: Session = Depends(get_db)):
+def get_event_bookings(event_id: int, db: Session = Depends(get_db), claims: dict = Depends(require_roles("organizer", "admin"))):
     """Lists all bookings for a specific event - useful for an organizer to see who's coming."""
     return db.query(models.Booking).filter(models.Booking.event_id == event_id).all()
 
 
 @app.delete("/api/bookings/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
-def cancel_booking(booking_id: int, db: Session = Depends(get_db)):
+def cancel_booking(booking_id: int, db: Session = Depends(get_db), claims: dict = Depends(current_claims)):
     """Cancels a booking, freeing up the spot for someone else."""
     booking = db.query(models.Booking).filter(models.Booking.id == booking_id).first()
     if not booking:

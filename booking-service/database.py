@@ -7,7 +7,8 @@ Owns bookings.db - separate from users.db and events.db.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "sqlite:///./bookings.db"
+from settings import settings
+DATABASE_URL = settings.database_url
 
 engine = create_engine(
     DATABASE_URL, connect_args={"check_same_thread": False}

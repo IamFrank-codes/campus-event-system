@@ -7,7 +7,8 @@ Owns reviews.db - separate from the other services' databases.
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "sqlite:///./reviews.db"
+from settings import settings
+DATABASE_URL = settings.database_url
 
 engine = create_engine(
     DATABASE_URL, connect_args={"check_same_thread": False}

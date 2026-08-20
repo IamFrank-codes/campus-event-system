@@ -13,25 +13,32 @@ Run with:
 Then visit http://127.0.0.1:8002/docs
 """
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from fastapi import Depends, HTTPException, status
 from sqlalchemy.orm import Session
 import httpx
 
 from database import Base, engine, get_db
 import models
 import schemas
+from settings import settings
+from security import current_claims, require_roles
 
 Base.metadata.create_all(bind=engine)
+
+
 
 app = FastAPI(
     title="Event Service",
     description="Handles campus events for the Campus Event Management System",
     version="1.0.0",
 )
+app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts.split(","))
 
 # The address of the User service - in a real deployment this would come
 # from an environment variable, not be hardcoded
-USER_SERVICE_URL = "http://127.0.0.1:8001"
+USER_SERVICE_URL = settings.user_service_url
 
 
 def verify_organizer(organizer_id: int):
@@ -69,7 +76,7 @@ def health_check():
 
 
 @app.post("/api/events", response_model=schemas.EventResponse, status_code=status.HTTP_201_CREATED)
-def create_event(event_in: schemas.EventCreate, db: Session = Depends(get_db)):
+def create_event(event_in: schemas.EventCreate, db: Session = Depends(get_db), claims: dict = Depends(require_roles("organizer", "admin"))):
     """Creates a new event, after checking the organizer is a real, valid user."""
     verify_organizer(event_in.organizer_id)
 
@@ -99,7 +106,7 @@ def get_event(event_id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/api/events/{event_id}", response_model=schemas.EventResponse)
-def update_event(event_id: int, updates: schemas.EventUpdate, db: Session = Depends(get_db)):
+def update_event(event_id: int, updates: schemas.EventUpdate, db: Session = Depends(get_db), claims: dict = Depends(require_roles("organizer", "admin"))):
     """Updates an existing event's details."""
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not event:
@@ -115,7 +122,7 @@ def update_event(event_id: int, updates: schemas.EventUpdate, db: Session = Depe
 
 
 @app.delete("/api/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(event_id: int, db: Session = Depends(get_db)):
+def delete_event(event_id: int, db: Session = Depends(get_db), claims: dict = Depends(require_roles("organizer", "admin"))):
     """Deletes an event."""
     event = db.query(models.Event).filter(models.Event.id == event_id).first()
     if not event:

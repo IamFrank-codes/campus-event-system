@@ -13,7 +13,8 @@ from passlib.context import CryptContext
 
 # In a real deployment, load this from an environment variable, never hardcode it.
 # For this student project, a .env file or os.environ is enough.
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "dev-only-secret-change-this-in-production")
+from settings import settings
+SECRET_KEY = settings.jwt_secret_key
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
