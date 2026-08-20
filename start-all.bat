@@ -43,20 +43,24 @@ echo Preparing %SERVICE%
 echo ================================================
 cd /d "%ROOT%/%SERVICE%" || exit /b 1
 
-echo [1/4] Directory: %ROOT%/%SERVICE%
+echo [1/5] Directory: %ROOT%/%SERVICE%
 if not exist venv (
-    echo [2/4] Creating virtual environment: python -m venv venv
+    echo [2/5] Creating virtual environment: python -m venv venv
     python -m venv venv
     if errorlevel 1 exit /b 1
 ) else (
-    echo [2/4] Virtual environment already exists: venv
+    echo [2/5] Virtual environment already exists: venv
 )
 
-echo [3/4] Activating: venv/Scripts/activate
+echo [3/5] Activating: venv/Scripts/activate
 call venv/Scripts/activate
 if errorlevel 1 exit /b 1
 
-echo [4/4] Installing: pip install -r requirements.txt
+echo [4/5] Upgrading pip: python.exe -m pip install --upgrade pip
+python.exe -m pip install --upgrade pip
+if errorlevel 1 exit /b 1
+
+echo [5/5] Installing: pip install -r requirements.txt
 pip install -r requirements.txt
 if errorlevel 1 exit /b 1
 
