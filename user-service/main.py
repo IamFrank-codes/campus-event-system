@@ -13,7 +13,7 @@ Then visit http://127.0.0.1:8001/docs for interactive API docs.
 """
 
 from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from jose import JWTError
@@ -38,7 +38,7 @@ app = FastAPI(
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts.split(","))
 
 # Tells FastAPI where clients should send their credentials to get a token
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token")
 
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
@@ -108,6 +108,24 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
 
     token = auth.create_access_token(data={"sub": str(user.id), "role": user.role})
     return schemas.Token(access_token=token)
+
+
+@app.post("/api/auth/token", response_model=schemas.Token, include_in_schema=False)
+def token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    """OAuth2 password-flow endpoint used by Swagger's Authorize dialog.
+
+    OAuth2 calls the login identifier ``username``; this service uses the
+    registered email address as that identifier.
+    """
+    user = db.query(models.User).filter(models.User.email == form_data.username).first()
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token = auth.create_access_token(data={"sub": str(user.id), "role": user.role})
+    return schemas.Token(access_token=access_token, token_type="bearer")
 
 
 @app.get("/api/users/me", response_model=schemas.UserResponse)

@@ -213,3 +213,98 @@ python.exe -m pytest -v
 ```
 
 The `email-validator` package is included in `user-service/requirements.txt`. If the User Service reports `ModuleNotFoundError: No module named 'email_validator'`, the wrong virtual environment is active or the User Service requirements have not yet been installed. Run the commands above from `user-service/`.
+
+### Removing the Starlette test-client warning
+
+If pytest still reports `Using httpx with starlette.testclient is deprecated`, the existing virtual environments were created before `httpx2` was added. Run the one-time repair script from the project root:
+
+```bat
+fix-test-warnings.bat
+```
+
+After it finishes, run the tests without installing anything:
+
+```bat
+run-tests-all.bat
+```
+
+### Markdown test evidence
+
+Run the test runner from the project root:
+
+```bat
+run-tests-all.bat
+```
+
+The runner does not install packages. It runs every service with its existing virtual environment and saves all commands and complete pytest output to:
+
+```text
+test-results.md
+```
+
+At the end of that Markdown file, the runner writes the summary in this format:
+
+```text
+User/Auth Service:     9 passed
+Event Service:         9 passed
+Booking Service:      10 passed
+Notification Service:  6 passed
+Review Service:       10 passed
+--------------------------------
+Total:                44 passed
+Warnings:              0
+```
+
+The actual numbers are calculated from the test run and may change if a test fails or is skipped. Use the generated `test-results.md` as testing evidence in the report.
+
+### Swagger authentication
+
+For the Swagger **Authorize** button, use the OAuth2 password flow. Enter the registered email address in the `username` field, the registration password in the `password` field, and leave `client_id` and `client_secret` blank. The OAuth2 token endpoint is `/api/auth/token`.
+
+The service also retains the JSON login endpoint `/api/auth/login` for clients that send:
+
+```json
+{
+  "email": "your-email@example.com",
+  "password": "your-password"
+}
+```
+
+After successful authorization, call `GET /api/users/me` without a path parameter. Swagger sends the bearer token automatically and the endpoint returns the profile belonging to that token.
+
+The technical OAuth2 endpoint `/api/auth/token` is hidden from the visible Swagger operation list. It remains available internally for the Swagger Authorize flow so protected endpoints can still be tested securely. The normal client-facing login endpoint remains `/api/auth/login`.
+
+## Postman Testing
+
+The project includes a complete Postman collection and local environment in the `postman/` folder:
+
+```text
+postman/Campus-Event-System.postman_collection.json
+postman/Campus-Event-System.local.postman_environment.json
+```
+
+Import both files into Postman. Select **Campus Event System - Local** as the active environment. Before running the collection, start all five services with `start-all.bat` and confirm that the health checks respond on ports 8001 through 8005.
+
+In the active Postman environment, set these values before running the collection:
+
+```text
+organizer_email = a unique organizer email address
+organizer_password = OrganizerPass123!
+student_email = a unique student email address
+student_password = StudentPass123!
+```
+
+The collection is organized in this order:
+
+1. Health checks for all five services.
+2. User registration and JSON login.
+3. Organizer and student profile retrieval.
+4. Event creation, listing, filtering, retrieval, and update.
+5. Booking creation, duplicate-booking rejection, and booking lookups.
+6. Notification creation, listing, and marking as read.
+7. Review creation, review listing, and average-rating calculation.
+8. Cleanup of the demonstration event, booking, and review.
+
+The collection captures JWTs and generated IDs automatically into environment variables. It uses the normal JSON endpoint `POST /api/auth/login`; the Swagger-only OAuth2 helper is not required for Postman testing. Protected requests automatically use the captured bearer tokens.
+
+Run the requests in order the first time because later requests depend on IDs captured by earlier requests. The collection’s test scripts check expected status codes and save the complete workflow evidence in Postman’s request history. Export screenshots of successful requests and error cases for the assignment report.

@@ -155,3 +155,21 @@ def test_get_nonexistent_user_returns_404():
     """Looking up a user id that doesn't exist should return a clean 404, not a server error."""
     response = client.get("/api/users/9999")
     assert response.status_code == 404
+
+
+def test_oauth2_token_endpoint_accepts_email_as_username():
+    """Swagger OAuth2 login should accept the registered email in the username field."""
+    client.post("/api/auth/register", json={
+        "full_name": "OAuth Test User",
+        "email": "oauth@example.com",
+        "password": "correctpass1",
+        "role": "student",
+    })
+
+    response = client.post("/api/auth/token", data={
+        "username": "oauth@example.com",
+        "password": "correctpass1",
+    })
+    assert response.status_code == 200
+    assert response.json()["token_type"] == "bearer"
+    assert response.json()["access_token"]

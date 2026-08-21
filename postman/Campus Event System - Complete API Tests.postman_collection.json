@@ -1,0 +1,758 @@
+{
+	"info": {
+		"_postman_id": "37c9cfd4-cc7d-49d3-9aff-564af7e29db4",
+		"name": "Campus Event System - Complete API Tests",
+		"description": "End-to-end Postman collection for all visible API endpoints. URLs are populated for all requests. Import the matching Campus Event System - Local environment.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "30835211"
+	},
+	"item": [
+		{
+			"name": "01 - Health Checks",
+			"item": [
+				{
+					"name": "User/Auth health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{user_url}}/health"
+					},
+					"response": []
+				},
+				{
+					"name": "Event health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{event_url}}/health"
+					},
+					"response": []
+				},
+				{
+					"name": "Booking health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{booking_url}}/health"
+					},
+					"response": []
+				},
+				{
+					"name": "Notification health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{notification_url}}/health"
+					},
+					"response": []
+				},
+				{
+					"name": "Review health",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{review_url}}/health"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "02 - Users and Authentication",
+			"item": [
+				{
+					"name": "Register organizer",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organizer registered', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+									"if (pm.response.code === 201) pm.environment.set('organizer_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"Postman Organizer {{run_id}}\",\n  \"email\": \"{{organizer_email}}\",\n  \"password\": \"{{organizer_password}}\",\n  \"role\": \"organizer\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{user_url}}/api/auth/register"
+					},
+					"response": []
+				},
+				{
+					"name": "Register student",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Student registered', function () { pm.expect(pm.response.code).to.be.oneOf([201, 409]); });",
+									"if (pm.response.code === 201) pm.environment.set('student_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"Postman Student {{run_id}}\",\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\",\n  \"role\": \"student\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{user_url}}/api/auth/register"
+					},
+					"response": []
+				},
+				{
+					"name": "Login organizer JSON",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organizer login succeeded', function () { pm.response.to.have.status(200); });",
+									"pm.environment.set('organizer_token', pm.response.json().access_token);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{organizer_email}}\",\n  \"password\": \"{{organizer_password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{user_url}}/api/auth/login"
+					},
+					"response": []
+				},
+				{
+					"name": "Get organizer profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Organizer profile returned', function () { pm.response.to.have.status(200); });",
+									"pm.environment.set('organizer_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{organizer_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{user_url}}/api/users/me"
+					},
+					"response": []
+				},
+				{
+					"name": "Login student JSON",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Student login succeeded', function () { pm.response.to.have.status(200); });",
+									"pm.environment.set('student_token', pm.response.json().access_token);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{student_email}}\",\n  \"password\": \"{{student_password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{user_url}}/api/auth/login"
+					},
+					"response": []
+				},
+				{
+					"name": "Get student profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Student profile returned', function () { pm.response.to.have.status(200); });",
+									"pm.environment.set('student_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{user_url}}/api/users/me"
+					},
+					"response": []
+				},
+				{
+					"name": "Get user by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{user_url}}/api/users/{{student_id}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Update own profile",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Profile updated', function () { pm.response.to.have.status(200); });"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"full_name\": \"Postman Student Updated {{run_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{user_url}}/api/users/{{student_id}}"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "03 - Events",
+			"item": [
+				{
+					"name": "Create event",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Event created', function () { pm.response.to.have.status(201); });",
+									"pm.environment.set('event_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{organizer_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Postman Campus Event {{run_id}}\",\n  \"description\": \"End-to-end Postman demonstration event\",\n  \"category\": \"academic\",\n  \"location\": \"Main Campus Hall\",\n  \"event_date\": \"2030-12-31T12:00:00\",\n  \"capacity\": 2,\n  \"organizer_id\": \"{{organizer_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{event_url}}/api/events"
+					},
+					"response": []
+				},
+				{
+					"name": "List events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{event_url}}/api/events"
+					},
+					"response": []
+				},
+				{
+					"name": "Filter events by category",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{event_url}}/api/events?category=academic",
+							"host": [
+								"{{event_url}}"
+							],
+							"path": [
+								"api",
+								"events"
+							],
+							"query": [
+								{
+									"key": "category",
+									"value": "academic"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get event by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{event_url}}/api/events/{{event_id}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Update event",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{organizer_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Postman Event {{run_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{event_url}}/api/events/{{event_id}}"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "04 - Bookings",
+			"item": [
+				{
+					"name": "Create booking",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Booking created', function () { pm.response.to.have.status(201); });",
+									"pm.environment.set('booking_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"student_id\": \"{{student_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{booking_url}}/api/bookings"
+					},
+					"response": []
+				},
+				{
+					"name": "Duplicate booking should fail",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Duplicate booking rejected', function () { pm.response.to.have.status(409); });"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"student_id\": \"{{student_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{booking_url}}/api/bookings"
+					},
+					"response": []
+				},
+				{
+					"name": "Get student bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{booking_url}}/api/bookings/student/{{student_id}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Get event bookings",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{organizer_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{booking_url}}/api/bookings/event/{{event_id}}"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "05 - Notifications",
+			"item": [
+				{
+					"name": "Send notification",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Notification sent', function () { pm.response.to.have.status(201); });",
+									"pm.environment.set('notification_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"user_id\": \"{{student_id}}\",\n  \"event_id\": \"{{event_id}}\",\n  \"notification_type\": \"booking_confirmation\",\n  \"message\": \"Your campus event booking is confirmed.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{notification_url}}/api/notifications/send"
+					},
+					"response": []
+				},
+				{
+					"name": "List user notifications",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{notification_url}}/api/notifications/user/{{student_id}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark notification read",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{notification_url}}/api/notifications/{{notification_id}}/read"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "06 - Reviews",
+			"item": [
+				{
+					"name": "Create review",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Review created', function () { pm.response.to.have.status(201); });",
+									"pm.environment.set('review_id', pm.response.json().id);"
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"student_id\": \"{{student_id}}\",\n  \"rating\": 5,\n  \"comment\": \"Excellent campus event.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "{{review_url}}/api/reviews"
+					},
+					"response": []
+				},
+				{
+					"name": "List event reviews",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{review_url}}/api/reviews/event/{{event_id}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Get average rating",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": "{{review_url}}/api/reviews/event/{{event_id}}/average"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "07 - Cleanup",
+			"item": [
+				{
+					"name": "Cancel booking",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{booking_url}}/api/bookings/{{booking_id}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete review",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{student_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{review_url}}/api/reviews/{{review_id}}"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete event",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{organizer_token}}",
+								"type": "text"
+							}
+						],
+						"url": "{{event_url}}/api/events/{{event_id}}"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "run_id",
+			"value": ""
+		}
+	]
+}
