@@ -13,7 +13,7 @@ Then visit http://127.0.0.1:8001/docs for interactive API docs.
 """
 
 from fastapi import FastAPI, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import APIKeyHeader
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from jose import JWTError
@@ -37,11 +37,12 @@ app = FastAPI(
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts.split(","))
 
-# Tells FastAPI where clients should send their credentials to get a token
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/auth/token")
+# Clients authenticate through the JSON login endpoint and send the returned JWT
+# as: Authorization: Bearer <token>. The Swagger-only form token helper is removed.
+authorization_header = APIKeyHeader(name="Authorization", auto_error=True)
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> models.User:
+def get_current_user(authorization: str = Depends(authorization_header), db: Session = Depends(get_db)) -> models.User:
     """
     Dependency that protects routes requiring login.
     Decodes the JWT from the request, looks up the user, and raises
@@ -53,11 +54,14 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
+        scheme, token = authorization.split(" ", 1)
+        if scheme.lower() != "bearer":
+            raise credentials_error
         payload = auth.decode_access_token(token)
         user_id = payload.get("sub")
         if user_id is None:
             raise credentials_error
-    except JWTError:
+    except (JWTError, ValueError):
         raise credentials_error
 
     user = db.query(models.User).filter(models.User.id == int(user_id)).first()
@@ -109,23 +113,6 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     token = auth.create_access_token(data={"sub": str(user.id), "role": user.role})
     return schemas.Token(access_token=token)
 
-
-@app.post("/api/auth/token", response_model=schemas.Token, include_in_schema=False)
-def token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-    """OAuth2 password-flow endpoint used by Swagger's Authorize dialog.
-
-    OAuth2 calls the login identifier ``username``; this service uses the
-    registered email address as that identifier.
-    """
-    user = db.query(models.User).filter(models.User.email == form_data.username).first()
-    if not user or not auth.verify_password(form_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = auth.create_access_token(data={"sub": str(user.id), "role": user.role})
-    return schemas.Token(access_token=access_token, token_type="bearer")
 
 
 @app.get("/api/users/me", response_model=schemas.UserResponse)

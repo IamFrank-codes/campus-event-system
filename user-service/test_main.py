@@ -157,19 +157,10 @@ def test_get_nonexistent_user_returns_404():
     assert response.status_code == 404
 
 
-def test_oauth2_token_endpoint_accepts_email_as_username():
-    """Swagger OAuth2 login should accept the registered email in the username field."""
-    client.post("/api/auth/register", json={
-        "full_name": "OAuth Test User",
-        "email": "oauth@example.com",
-        "password": "correctpass1",
-        "role": "student",
-    })
-
+def test_swagger_only_token_helper_is_removed():
+    """Authentication is provided through JSON login; the old form helper is unavailable."""
     response = client.post("/api/auth/token", data={
-        "username": "oauth@example.com",
-        "password": "correctpass1",
+        "username": "unused@example.com",
+        "password": "unused-password",
     })
-    assert response.status_code == 200
-    assert response.json()["token_type"] == "bearer"
-    assert response.json()["access_token"]
+    assert response.status_code == 404
