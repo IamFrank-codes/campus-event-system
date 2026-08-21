@@ -1,7 +1,7 @@
 service,endpoint,requests,successes,failures,error_rate_pct,avg_ms,median_ms,p95_ms,min_ms,max_ms,throughput_req_s,status_codes
-User / Auth Service,/health,50,50,0,0.0,12.79,14.59,26.81,3.5,27.61,76.67,200
-Event Service,/health,50,50,0,0.0,13.73,15.12,26.96,3.9,31.54,71.57,200
-Event Service,/api/events,50,50,0,0.0,17.87,12.33,31.82,5.82,53.13,55.19,200
-Booking Service,/health,50,50,0,0.0,13.78,10.26,29.81,3.75,30.82,71.32,200
-Notification Service,/health,50,50,0,0.0,11.02,5.33,31.08,3.87,56.32,88.81,200
-Review Service,/health,50,50,0,0.0,13.45,15.13,29.08,4.01,30.46,73.05,200
+User / Auth Service,/health,20,20,0,0.0,39.92,14.78,122.04,8.97,122.04,117.54,200
+Event Service,/health,20,20,0,0.0,40.38,14.91,121.48,9.7,121.48,113.15,200
+Event Service,/api/events,20,0,20,100.0,,,,,,23.25,500
+Booking Service,/health,20,20,0,0.0,40.23,14.63,125.63,11.04,125.63,116.59,200
+Notification Service,/health,20,20,0,0.0,36.38,14.11,106.69,9.88,106.69,120.2,200
+Review Service,/health,20,20,0,0.0,35.08,12.84,104.69,9.2,104.69,129.31,200
